@@ -21,7 +21,18 @@ namespace Client
             endPoint = new IPEndPoint(ipAdd, port);
 
             c_socket = new Socket(ipAdd.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            c_socket.Bind(endPoint);
+        }
+
+        public void Start()
+        {
+            c_socket.Connect(endPoint);
+        }
+
+        public void Send(string msg)
+        {
+            byte[] msgBuffer = Encoding.ASCII.GetBytes(msg);
+            c_socket.Send(msgBuffer);
+
         }
 
     }
