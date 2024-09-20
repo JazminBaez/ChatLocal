@@ -14,6 +14,8 @@ namespace Server
         IPEndPoint endPoint;
 
         Socket s_socket;
+        Socket? c_socket;
+
         public Server(string ip, int port)
         {
             host = Dns.GetHostByName(ip);
@@ -24,6 +26,16 @@ namespace Server
             s_socket.Bind(endPoint);
             s_socket.Listen(10);
 
+        }
+
+        public void Start()
+        {
+            byte[] buffer = new byte[1024];
+            c_socket = s_socket.Accept();
+            Console.WriteLine("Connected to client");
+
+            c_socket.Receive(buffer);
+            Console.Write(Encoder.ASCII.)
         }
     }
 }
