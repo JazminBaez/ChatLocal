@@ -4,6 +4,10 @@ using System.Net;
 using System.Text;
 using System.Net.Sockets;
 using System.Threading;
+using Serialization;
+using System.Diagnostics;
+
+
 namespace Server
 {
     public class Server
@@ -32,39 +36,82 @@ namespace Server
             
             Thread clientThread;
             IPEndPoint clientEndpoint;
-            Client clientData;
+            User clientData;
 
             while (true)
             {
                 c_socket = s_socket.Accept();
-                //imprime datos del cliente conectado
-               clientData = new Client(((IPEndPoint)c_socket.RemoteEndPoint).Address.ToString(), ((IPEndPoint)c_socket.RemoteEndPoint).Port);
-                Console.WriteLine("Connected to client: " + clientData.IP + " - " + clientData.Puerto);
                 clientThread = new Thread(() => clientConnection(c_socket));
                 clientThread.Start();
+               
             }
+
+
     
         }
 
         public void clientConnection(Socket client)
         {
-            byte[]? buffer;
+            byte[] buffer;
+            string msg;
+            User user;
+            string alias;
+            int bytesReceived;
+             byte[] receivedData;
+
+            c_socket.Send(stringToBytes("Welcome to the server"));
+
+            try {
+                while (true)
+                {
+                    buffer = new byte[1024];
+                    bytesReceived = c_socket.Receive(buffer);
+
+                    receivedData = getReceivedData(buffer, bytesReceived);
+
+                    user = (User)JSONSerialization.Deserialize(receivedData, typeof(User));
+
+                    alias = user.alias;
+
+
+                    Console.WriteLine("Cliente conectado, " + alias);
+                    Console.Out.Flush();
+                }
+            }catch(SocketException s_e)
+            {
+                Console.WriteLine("Client disconnected");
+            }
+            
+        }
+
+        public byte[] getReceivedData(byte[] buffer, int bytesReceived)
+        {
+
+            byte[] receivedData = new byte[bytesReceived];
+            Array.Copy(buffer, receivedData, bytesReceived);
+            return receivedData;
+        }
+
+
+        public String byteToString(byte[] bytes)
+        {
             string msg;
             int endIndex;
-            while (true)
+
+            msg = Encoding.ASCII.GetString(bytes);
+            endIndex = msg.IndexOf("\0");
+
+            if (endIndex > 0)
             {
-                buffer = new byte[1024];
-                c_socket.Receive(buffer);
-                msg = Encoding.ASCII.GetString(buffer);
-                endIndex = msg.IndexOf("\0");
-
-                if (endIndex > 0)
-                {
-                    msg = msg.Substring(0, endIndex);
-                }
-
-                Console.WriteLine("User: " + msg);
+                msg = msg.Substring(0, endIndex);
             }
+
+            return msg;
+        }
+
+        public byte[] stringToBytes(string msg)
+        {
+            return Encoding.ASCII.GetBytes(msg);
         }
     }
 }

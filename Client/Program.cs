@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Server;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -15,19 +16,19 @@ namespace Client
             Client c = new Client("localHost", 4404);
             c.Start();
             string msg;
+            string alias;
+            User user;
+
+
+
             while (true)
             {
-                Console.WriteLine("Enter message: ");
-                msg = Console.ReadLine();
-                if (msg == "exit")
-                {
-                    break;
-                }
-                c.Send(msg);
-                
-                Console.WriteLine("-" + DateTime.Now + ": " + msg);
+                Console.Write("Ingrese alias: ");
+                alias = Console.ReadLine();
+                user = new User(alias);
+                c.SendObject(user);
             }
-            Console.ReadKey();
+
         }
     }
 }

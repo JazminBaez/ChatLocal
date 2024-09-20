@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Serialization;
+using Server;
 
 namespace Client
 {
@@ -34,6 +36,40 @@ namespace Client
             c_socket.Send(msgBuffer);
 
         }
-      
+
+        public String Received()
+        {
+            byte[] buffer = new byte[1024];
+            c_socket.Receive(buffer);
+            return byteToString(buffer);
+        }
+
+        public void SendObject(object toSend)
+        {
+            User user = (User)toSend;
+            c_socket.Send(JSONSerialization.Serialize(toSend));
+            //imprime lo que envia
+            Console.WriteLine("alias: "+user.alias);
+            string jsonString = JsonSerializer.Serialize(toSend);
+            Console.WriteLine(jsonString);
+
+        }
+
+        public String byteToString(byte[] bytes)
+        {
+            string msg;
+            int endIndex;
+
+            msg = Encoding.ASCII.GetString(bytes);
+            endIndex = msg.IndexOf("\0");
+
+            if (endIndex > 0)
+            {
+                msg = msg.Substring(0, endIndex);
+            }
+
+            return msg;
+        }
+
     }
 }
