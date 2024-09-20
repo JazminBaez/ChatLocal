@@ -48,13 +48,9 @@ namespace Client
         {
             User user = (User)toSend;
             c_socket.Send(JSONSerialization.Serialize(toSend));
-            //imprime lo que envia
-            Console.WriteLine("alias: "+user.alias);
             string jsonString = JsonSerializer.Serialize(toSend);
-            Console.WriteLine(jsonString);
 
         }
-
         public String byteToString(byte[] bytes)
         {
             string msg;
@@ -69,6 +65,11 @@ namespace Client
             }
 
             return msg;
+        }
+
+        public byte[] stringToBytes(string msg)
+        {
+            return Encoding.ASCII.GetBytes(msg);
         }
 
     }
