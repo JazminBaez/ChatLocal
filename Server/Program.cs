@@ -7,9 +7,9 @@ using System.Net.Sockets;
 
 namespace Server
 {
-    public class Program
+    class Program
     {
-         public void Main()
+         static void Main(String[] args)
         {
             Server server = new Server("localHost", 4404);
             server.Start();

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Server
 {
@@ -30,12 +31,27 @@ namespace Server
 
         public void Start()
         {
-            byte[] buffer = new byte[1024];
+            byte[] buffer;
+            string msg;
+            int endIndex;
             c_socket = s_socket.Accept();
             Console.WriteLine("Connected to client");
 
-            c_socket.Receive(buffer);
-            Console.Write(Encoder.ASCII.)
+            while (true)
+            {
+                buffer = new byte[1024];
+                c_socket.Receive(buffer);
+                msg = Encoding.ASCII.GetString(buffer);
+                endIndex = msg.IndexOf("\0");
+
+                if (endIndex > 0)
+                {
+                    msg = msg.Substring(0, endIndex);
+                }
+
+                Console.WriteLine("User: " + msg);
+            }
+           
         }
     }
 }
