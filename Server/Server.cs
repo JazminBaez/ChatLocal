@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
-
+using System.Threading;
 namespace Server
 {
     public class Server
@@ -31,12 +29,28 @@ namespace Server
 
         public void Start()
         {
-            byte[] buffer;
+            
+            Thread clientThread;
+            IPEndPoint clientEndpoint;
+            Client clientData;
+
+            while (true)
+            {
+                c_socket = s_socket.Accept();
+                //imprime datos del cliente conectado
+               clientData = new Client(((IPEndPoint)c_socket.RemoteEndPoint).Address.ToString(), ((IPEndPoint)c_socket.RemoteEndPoint).Port);
+                Console.WriteLine("Connected to client: " + clientData.IP + " - " + clientData.Puerto);
+                clientThread = new Thread(() => clientConnection(c_socket));
+                clientThread.Start();
+            }
+    
+        }
+
+        public void clientConnection(Socket client)
+        {
+            byte[]? buffer;
             string msg;
             int endIndex;
-            c_socket = s_socket.Accept();
-            Console.WriteLine("Connected to client");
-
             while (true)
             {
                 buffer = new byte[1024];
@@ -51,7 +65,6 @@ namespace Server
 
                 Console.WriteLine("User: " + msg);
             }
-           
         }
     }
 }

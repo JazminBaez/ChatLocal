@@ -34,6 +34,6 @@ namespace Client
             c_socket.Send(msgBuffer);
 
         }
-
+      
     }
 }
