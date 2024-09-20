@@ -27,6 +27,7 @@ namespace Client
                 alias = Console.ReadLine();
                 user = new User(alias);
                 c.SendObject(user);
+                Console.WriteLine(c.Received());    
             }
 
         }
