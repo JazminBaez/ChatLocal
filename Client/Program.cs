@@ -1,6 +1,7 @@
 ﻿using Server;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -33,6 +34,7 @@ namespace Client
                 Console.WriteLine("Envia: ");
                 msg = Console.ReadLine();
                 c.SendMessage(msg, alias);
+                //imprime datos del socket
             }
 
         }

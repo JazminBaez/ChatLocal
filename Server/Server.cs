@@ -19,6 +19,9 @@ namespace Server
         Socket s_socket;
         Socket? c_socket;
 
+        private Socket serverSocket;
+        private List<Socket> clientSockets = new List<Socket>();
+
         public Server(string ip, int port)
         {
             host = Dns.GetHostByName(ip);
@@ -38,58 +41,131 @@ namespace Server
             IPEndPoint clientEndpoint;
             User clientData;
 
+            Console.WriteLine("Servidor iniciado. Esperando clientes...");
             while (true)
             {
                 c_socket = s_socket.Accept();
-                clientThread = new Thread(() => clientConnection(c_socket));
-                clientThread.Start();
+                clientSockets.Add(c_socket);
+                //clientThread = new Thread(() => clientConnection(c_socket));
+                //clientThread.Start();
+                _ = Task.Run(() => clientConnection(c_socket));
             }
 
 
     
         }
 
-        public void clientConnection(Socket client)
+        //public void clientConnection(Socket client)
+        //{
+        //    User user;
+        //    string alias;
+        //    int bytesReceived;
+        //     byte[] receivedData;
+        //    Message msg;
+
+        //    c_socket.Send(stringToBytes("Welcome to the server"));
+
+        //    try {
+        //        byte[] buffer = new byte[1024];
+        //        bytesReceived = c_socket.Receive(buffer);
+
+        //        receivedData = getReceivedData(buffer, bytesReceived);
+
+        //        user = (User)JSONSerialization.Deserialize(receivedData, typeof(User));
+
+        //        alias = user.alias;
+
+
+        //        Console.WriteLine("Cliente conectado, " + alias);
+        //        Console.Out.Flush();
+
+        //        while (true)
+        //        {
+        //            //IMRIME LO QUE HAY EN EL BUFFER ANTESD DE ARRANCAAR EL BUCLE
+
+        //            Console.WriteLine($"Cliente {c_socket.RemoteEndPoint} siendo escuchado");
+
+        //            byte[] bufferMsg = new byte[1024];
+        //           bytesReceived = c_socket.Receive(bufferMsg);
+        //            Console.WriteLine("DEPURACION bytesReceived: " + byteToString(bufferMsg));
+
+        //            if (bytesReceived == 0)
+        //            {
+        //                Console.WriteLine($"Cliente {c_socket.RemoteEndPoint} desconectado.");
+        //                break; 
+        //            }
+
+        //            receivedData = getReceivedData(bufferMsg, bytesReceived);
+        //            msg  = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
+        //            Console.WriteLine(msg.userFrom + ": " + msg.msg);
+        //            Console.Out.Flush();
+        //        }
+        //    }
+        //    catch(SocketException s_e)
+        //    {
+        //        Console.WriteLine("Client disconnected");
+        //    }
+        //    finally
+        //    {
+        //        c_socket.Close(); 
+        //    }
+
+        //}
+
+        public async Task clientConnection(Socket client)
         {
-            byte[] buffer;
             User user;
             string alias;
             int bytesReceived;
-             byte[] receivedData;
+            byte[] receivedData;
             Message msg;
 
-            c_socket.Send(stringToBytes("Welcome to the server"));
+            client.Send(stringToBytes("Welcome to the server"));
 
-            try {
-                buffer = new byte[1024];
-                bytesReceived = c_socket.Receive(buffer);
+            try
+            {
+                byte[] buffer = new byte[1024];
+                bytesReceived = await client.ReceiveAsync(buffer, SocketFlags.None); // Ahora asíncrono
 
                 receivedData = getReceivedData(buffer, bytesReceived);
 
                 user = (User)JSONSerialization.Deserialize(receivedData, typeof(User));
-
                 alias = user.alias;
-
 
                 Console.WriteLine("Cliente conectado, " + alias);
                 Console.Out.Flush();
 
                 while (true)
                 {
-                    buffer = new byte[1024];
-                    bytesReceived = c_socket.Receive(buffer);
-                    receivedData = getReceivedData(buffer, bytesReceived);
-                    msg  = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
-                    Console.WriteLine(msg.userFrom + ": " + msg.msg);
+                    Console.WriteLine($"Cliente {client.RemoteEndPoint} siendo escuchado");
 
+                    byte[] bufferMsg = new byte[1024];
+                    bytesReceived = await client.ReceiveAsync(bufferMsg, SocketFlags.None); // Ahora asíncrono
+
+                    Console.WriteLine("DEPURACIÓN bytesReceived: " + byteToString(bufferMsg));
+
+                    if (bytesReceived == 0)
+                    {
+                        Console.WriteLine($"Cliente {client.RemoteEndPoint} desconectado.");
+                        break;
+                    }
+
+                    receivedData = getReceivedData(bufferMsg, bytesReceived);
+                    msg = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
+                    Console.WriteLine(msg.userFrom + ": " + msg.msg);
+                    Console.Out.Flush();
                 }
             }
-            catch(SocketException s_e)
+            catch (SocketException s_e)
             {
                 Console.WriteLine("Client disconnected");
             }
-            
+            finally
+            {
+                client.Close();
+            }
         }
+
 
         public byte[] getReceivedData(byte[] buffer, int bytesReceived)
         {
