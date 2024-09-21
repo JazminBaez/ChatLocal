@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text.Json;
 
-namespace Serialization
+namespace Server.Chat
 {
     class JSONSerialization
     {

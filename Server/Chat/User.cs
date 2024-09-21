@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 
 
-namespace Server
+namespace Server.Chat
 {
     [Serializable]
     public class User
@@ -13,12 +13,12 @@ namespace Server
 
 
         [JsonConstructor]
-        public User(string alias) 
+        public User(string alias)
         {
             this.alias = alias;
 
         }
 
-     
+
     }
 }

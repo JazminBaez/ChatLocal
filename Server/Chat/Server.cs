@@ -4,11 +4,11 @@ using System.Net;
 using System.Text;
 using System.Net.Sockets;
 using System.Threading;
-using Serialization;
 using System.Diagnostics;
+using System.Collections;
 
 
-namespace Server
+namespace Server.Chat
 {
     public class Server
     {
@@ -17,37 +17,57 @@ namespace Server
         IPEndPoint endPoint;
 
         Socket s_socket;
-        Socket? c_socket;
+        Thread clientThread;
+        Hashtable users;
 
         public Server(string ip, int port)
         {
-            host = Dns.GetHostByName(ip);
-            ipAdd = host.AddressList[0];
-            endPoint = new IPEndPoint(ipAdd, port);
+            try
+            {
+                host = Dns.GetHostByName(ip);
+                ipAdd = host.AddressList[0];
+                endPoint = new IPEndPoint(ipAdd, port);
 
-            s_socket = new Socket(ipAdd.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            s_socket.Bind(endPoint);
-            s_socket.Listen(10);
+                s_socket = new Socket(ipAdd.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                s_socket.Bind(endPoint);
+                s_socket.Listen(10);
+
+                clientThread = new Thread(this.Listen);
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+            
 
         }
 
-        public void Start()
+        private void Listen()
         {
-            
-            Thread clientThread;
-            IPEndPoint clientEndpoint;
-            User clientData;
 
+            Socket client;
             while (true)
             {
-                c_socket = s_socket.Accept();
-                clientThread = new Thread(() => clientConnection(c_socket));
+                client = this.s_socket.Accept();
+                clientThread = new Thread(() => clientConnection(client));
                 clientThread.Start();
-               
             }
 
+        }
 
-    
+        private void Send(Socket s, object toSend)
+        {
+            byte[] buffer = new byte[1024];
+            byte[] objectSerialized = JSONSerialization.Serialize(toSend);
+            Array.Copy(objectSerialized, buffer, objectSerialized.Length);
+            s.Send(buffer);
+        }
+
+        private object Received(Socket s)
+        {
+            byte[] buffer = new byte[1024];
+            s.Receive(buffer);
+            return JSONSerialization.Deserialize(buffer, typeof(User));
         }
 
         public void clientConnection(Socket client)
@@ -57,11 +77,12 @@ namespace Server
             User user;
             string alias;
             int bytesReceived;
-             byte[] receivedData;
+            byte[] receivedData;
 
             c_socket.Send(stringToBytes("Welcome to the server"));
 
-            try {
+            try
+            {
                 while (true)
                 {
                     buffer = new byte[1024];
@@ -77,11 +98,12 @@ namespace Server
                     Console.WriteLine("Cliente conectado, " + alias);
                     Console.Out.Flush();
                 }
-            }catch(SocketException s_e)
+            }
+            catch (SocketException s_e)
             {
                 Console.WriteLine("Client disconnected");
             }
-            
+
         }
 
         public byte[] getReceivedData(byte[] buffer, int bytesReceived)
@@ -93,7 +115,7 @@ namespace Server
         }
 
 
-        public String byteToString(byte[] bytes)
+        public string byteToString(byte[] bytes)
         {
             string msg;
             int endIndex;
