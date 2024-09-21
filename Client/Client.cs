@@ -17,6 +17,7 @@ namespace Client
         IPEndPoint endPoint;
 
         Socket c_socket;
+        User user;
         public Client(string ip, int port) {
             host = Dns.GetHostEntry(ip);
             ipAdd = host.AddressList[0];
@@ -30,10 +31,11 @@ namespace Client
             c_socket.Connect(endPoint);
         }
 
-        public void Send(string msg)
+        public void SendMessage(string msg, string userFrom)
         {
-            byte[] msgBuffer = Encoding.ASCII.GetBytes(msg);
-            c_socket.Send(msgBuffer);
+            Message message = new Message(msg, userFrom);
+            string jsonString = JsonSerializer.Serialize(message);
+            c_socket.Send(JSONSerialization.Serialize(message));
 
         }
 
