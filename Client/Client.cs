@@ -35,6 +35,13 @@ namespace Client
         {
             Message message = new Message(msg, userFrom);
             string jsonString = JsonSerializer.Serialize(message);
+            Console.Write("DEPUERACION: SENDMESSAGE : " + jsonString);
+
+
+
+
+
+
             c_socket.Send(JSONSerialization.Serialize(message));
 
         }
