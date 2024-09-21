@@ -19,15 +19,20 @@ namespace Client
             string alias;
             User user;
 
+            Console.Write("Ingrese alias: ");
+            alias = Console.ReadLine();
+            user = new User(alias);
+            c.SendObject(user);
+            Console.WriteLine(c.Received());
 
+            
+            
 
             while (true)
             {
-                Console.Write("Ingrese alias: ");
-                alias = Console.ReadLine();
-                user = new User(alias);
-                c.SendObject(user);
-                Console.WriteLine(c.Received());    
+                Console.WriteLine("Envia: ");
+                msg = Console.ReadLine();
+                c.SendMessage(msg, alias);
             }
 
         }

@@ -43,7 +43,6 @@ namespace Server
                 c_socket = s_socket.Accept();
                 clientThread = new Thread(() => clientConnection(c_socket));
                 clientThread.Start();
-               
             }
 
 
@@ -53,31 +52,39 @@ namespace Server
         public void clientConnection(Socket client)
         {
             byte[] buffer;
-            string msg;
             User user;
             string alias;
             int bytesReceived;
              byte[] receivedData;
+            Message msg;
 
             c_socket.Send(stringToBytes("Welcome to the server"));
 
             try {
+                buffer = new byte[1024];
+                bytesReceived = c_socket.Receive(buffer);
+
+                receivedData = getReceivedData(buffer, bytesReceived);
+
+                user = (User)JSONSerialization.Deserialize(receivedData, typeof(User));
+
+                alias = user.alias;
+
+
+                Console.WriteLine("Cliente conectado, " + alias);
+                Console.Out.Flush();
+
                 while (true)
                 {
                     buffer = new byte[1024];
                     bytesReceived = c_socket.Receive(buffer);
-
                     receivedData = getReceivedData(buffer, bytesReceived);
+                    msg  = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
+                    Console.WriteLine(msg.userFrom + ": " + msg.msg);
 
-                    user = (User)JSONSerialization.Deserialize(receivedData, typeof(User));
-
-                    alias = user.alias;
-
-
-                    Console.WriteLine("Cliente conectado, " + alias);
-                    Console.Out.Flush();
                 }
-            }catch(SocketException s_e)
+            }
+            catch(SocketException s_e)
             {
                 Console.WriteLine("Client disconnected");
             }
