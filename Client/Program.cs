@@ -12,31 +12,12 @@ namespace Client
 {
     class Program()
     {
-        static void Main(String[] args)
+        static async Task Main(String[] args)
         {
-            Client c = new Client("localHost", 4404);
-            c.Start();
-            string msg;
-            string alias;
-            User user;
+            Client c = new Client("localhost", 4404);
 
-            Console.Write("Ingrese alias: ");
-            alias = Console.ReadLine();
-            user = new User(alias);
-            c.SendObject(user);
-            Console.WriteLine(c.Received());
-
-            
-            
-
-            while (true)
-            {
-                Console.WriteLine("Envia: ");
-                msg = Console.ReadLine();
-                c.SendMessage(msg, alias);
-                //imprime datos del socket
-            }
-
+            // Iniciar la conexión
+            await c.Start(); // Espera a que termine Start()
         }
     }
 }
