@@ -119,24 +119,40 @@ namespace Server
             byte[] receivedData;
             Message msg;
 
-            client.Send(stringToBytes("Welcome to the server"));
+            Message welcomeMessage = new Message("Welcome to the server", "Server");
+            client.Send(JSONSerialization.Serialize(welcomeMessage));
+
 
             try
             {
-               
-                receivedData = this.readBuffer(client);
+
+                receivedData = await this.readBuffer(client);
 
                 user = (User)JSONSerialization.Deserialize(receivedData, typeof(User));
                 alias = user.alias;
 
                 Console.WriteLine("Cliente conectado, " + alias);
+
                 Console.Out.Flush();
 
                 while (true)
                 {
-                    receivedData = this.readBuffer(client);
+                    receivedData = await this.readBuffer(client);
+
                     msg = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
                     Console.WriteLine(msg.userFrom + ": " + msg.msg);
+
+                    foreach (Socket sClient in clientSockets)
+                    {
+                        //imprime el remoteEnpoint del socket
+
+                        if (sClient != client)  // No reenviar al cliente que lo envió
+                        {
+                            Message message = new Message("--" + msg.userFrom + ": " + msg.msg, "Server");
+                            sClient.Send(JSONSerialization.Serialize(message));
+                        }
+                    }
+
                     Console.Out.Flush();
                 }
             }
@@ -146,27 +162,31 @@ namespace Server
             }
             finally
             {
+
+                Console.WriteLine("Client disconnected");
                 client.Close();
             }
         }
 
-        public byte[] readBuffer(Socket client)
+        public async Task<byte[]> readBuffer(Socket client)
         {
             int bytesReceived;
-            byte[] receivedData;
+            byte[] buffer = new byte[1024]; 
 
-            byte[] buffer = new byte[1024];
             bytesReceived = await client.ReceiveAsync(buffer, SocketFlags.None);
 
             if (bytesReceived == 0)
             {
                 Console.WriteLine($"Cliente {client.RemoteEndPoint} desconectado.");
-                return null;
+                return null; 
             }
 
-            return receivedData = getReceivedData(buffer, bytesReceived);
+            byte[] receivedData = new byte[bytesReceived];
+            Array.Copy(buffer, receivedData, bytesReceived);
 
+            return receivedData;
         }
+
 
         public byte[] getReceivedData(byte[] buffer, int bytesReceived)
         {
