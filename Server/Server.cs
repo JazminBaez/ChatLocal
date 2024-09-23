@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net;
+﻿using System.Net;
 using System.Text;
 using System.Net.Sockets;
-using System.Threading;
 using Serialization;
-using System.Diagnostics;
 
 
 namespace Server
@@ -17,10 +13,11 @@ namespace Server
         IPEndPoint endPoint;
 
         Socket s_socket;
-        Socket? c_socket;
+        Socket? s_client;
 
         private Socket serverSocket;
         private List<Socket> clientSockets = new List<Socket>();
+        private List<User> usersList = new List<User>();
 
         public Server(string ip, int port)
         {
@@ -36,137 +33,116 @@ namespace Server
 
         public void Start()
         {
-
-            Thread clientThread;
-            IPEndPoint clientEndpoint;
-            User clientData;
-
-            Console.WriteLine("Servidor iniciado. Esperando clientes...");
             while (true)
             {
-                c_socket = s_socket.Accept();
-                clientSockets.Add(c_socket);
-                //clientThread = new Thread(() => clientConnection(c_socket));
-                //clientThread.Start();
-                _ = Task.Run(() => clientConnection(c_socket));
+                Console.WriteLine("Esperando conexión de cliente...");
+                s_client = s_socket.Accept();
+                clientSockets.Add(s_client);
+                _ = Task.Run(() => clientConnection(s_client));
             }
-
-
 
         }
 
-        //public void clientConnection(Socket client)
-        //{
-        //    User user;
-        //    string alias;
-        //    int bytesReceived;
-        //     byte[] receivedData;
-        //    Message msg;
 
-        //    c_socket.Send(stringToBytes("Welcome to the server"));
-
-        //    try {
-        //        byte[] buffer = new byte[1024];
-        //        bytesReceived = c_socket.Receive(buffer);
-
-        //        receivedData = getReceivedData(buffer, bytesReceived);
-
-        //        user = (User)JSONSerialization.Deserialize(receivedData, typeof(User));
-
-        //        alias = user.alias;
-
-
-        //        Console.WriteLine("Cliente conectado, " + alias);
-        //        Console.Out.Flush();
-
-        //        while (true)
-        //        {
-        //            //IMRIME LO QUE HAY EN EL BUFFER ANTESD DE ARRANCAAR EL BUCLE
-
-        //            Console.WriteLine($"Cliente {c_socket.RemoteEndPoint} siendo escuchado");
-
-        //            byte[] bufferMsg = new byte[1024];
-        //           bytesReceived = c_socket.Receive(bufferMsg);
-        //            Console.WriteLine("DEPURACION bytesReceived: " + byteToString(bufferMsg));
-
-        //            if (bytesReceived == 0)
-        //            {
-        //                Console.WriteLine($"Cliente {c_socket.RemoteEndPoint} desconectado.");
-        //                break; 
-        //            }
-
-        //            receivedData = getReceivedData(bufferMsg, bytesReceived);
-        //            msg  = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
-        //            Console.WriteLine(msg.userFrom + ": " + msg.msg);
-        //            Console.Out.Flush();
-        //        }
-        //    }
-        //    catch(SocketException s_e)
-        //    {
-        //        Console.WriteLine("Client disconnected");
-        //    }
-        //    finally
-        //    {
-        //        c_socket.Close(); 
-        //    }
-
-        //}
 
         public async Task clientConnection(Socket client)
         {
-            User user;
-            string alias;
-            byte[] receivedData;
-            Message msg;
-
-            Message welcomeMessage = new Message("Welcome to the server", "Server");
-            client.Send(JSONSerialization.Serialize(welcomeMessage));
-
-
             try
             {
+                SendWelcomeMessage(client);
 
-                receivedData = await this.readBuffer(client);
+                var user = await GetUserFromClient(client);
+                usersList.Add(user);
+                Console.WriteLine($"Cliente conectado: {user.alias}");
 
-                user = (User)JSONSerialization.Deserialize(receivedData, typeof(User));
-                alias = user.alias;
-
-                Console.WriteLine("Cliente conectado, " + alias);
-
-                Console.Out.Flush();
-
-                while (true)
-                {
-                    receivedData = await this.readBuffer(client);
-
-                    msg = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
-                    Console.WriteLine(msg.userFrom + ": " + msg.msg);
-
-                    foreach (Socket sClient in clientSockets)
-                    {
-                        //imprime el remoteEnpoint del socket
-
-                        if (sClient != client)  // No reenviar al cliente que lo envió
-                        {
-                            Message message = new Message("--" + msg.userFrom + ": " + msg.msg, "Server");
-                            sClient.Send(JSONSerialization.Serialize(message));
-                        }
-                    }
-
-                    Console.Out.Flush();
-                }
+                await HandleClientMessages(client, user);
             }
             catch (SocketException s_e)
             {
-                Console.WriteLine("Client disconnected");
+                Console.WriteLine("Error en la conexión con el cliente: " + s_e.Message);
             }
             finally
             {
-
-                Console.WriteLine("Client disconnected");
                 client.Close();
             }
         }
+
+        private void SendWelcomeMessage(Socket client)
+        {
+            Message welcomeMessage = new Message("CHAT DE REDES 2024", "Server");
+            client.Send(JSONSerialization.Serialize(welcomeMessage));
+        }
+
+        private async Task<User> GetUserFromClient(Socket client)
+        {
+            byte[] receivedData = await readBuffer(client);
+            User user = (User)JSONSerialization.Deserialize(receivedData, typeof(User));
+            return user;
+        }
+
+        private async Task HandleClientMessages(Socket client, User user)
+        {
+            while (true)
+            {
+                byte[] receivedData = await readBuffer(client);
+                Message msg = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
+
+                if (msg.msg.StartsWith("/"))
+                {
+                    if (await HandleClientCommands(client, msg, user))
+                    {
+                        break;
+                    }
+                    continue;
+                }
+
+                Console.WriteLine($"{msg.userFrom}: {msg.msg}");
+                BroadcastMessageToClients(client, msg);
+            }
+        }
+
+        private async Task<bool> HandleClientCommands(Socket client, Message msg, User user)
+        {
+            if (msg.msg.Equals("/quit", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"{user.alias} se ha desconectado");
+                usersList.Remove(user);
+                return true;  
+            }
+
+            if (msg.msg.Equals("/list", StringComparison.OrdinalIgnoreCase))
+            {
+                string userList = "Usuarios conectados: " + string.Join(", ", usersList.Select(u => u.alias));
+                Message listMessage = new Message(userList, "Server");
+                client.Send(JSONSerialization.Serialize(listMessage));
+                return false;
+            }
+
+            if (msg.msg.Equals("/commands", StringComparison.OrdinalIgnoreCase))
+            {
+                string availableCommands = "Comandos disponibles: \n/quit ---- cierra la conexion con el servidor, " +
+                                                                  "\n /list ---- lista los usuarios conectados, " +
+                                                                  "\n/commands --- lista los comandos disponibles";
+                Message commandsMessage = new Message(availableCommands, "Server");
+                client.Send(JSONSerialization.Serialize(commandsMessage));
+                return false;
+            }
+
+            return false;
+        }
+
+        private void BroadcastMessageToClients(Socket client, Message msg)
+        {
+            foreach (Socket sClient in clientSockets)
+            {
+                if (sClient != client)
+                {
+                    Message broadcastMessage = new Message($"{msg.userFrom}: {msg.msg}", "Server");
+                    sClient.Send(JSONSerialization.Serialize(broadcastMessage));
+                }
+            }
+        }
+
 
         public async Task<byte[]> readBuffer(Socket client)
         {
@@ -188,14 +164,10 @@ namespace Server
         }
 
 
-        public byte[] getReceivedData(byte[] buffer, int bytesReceived)
+        public Message quitCommand(byte[] receivedData)
         {
-
-            byte[] receivedData = new byte[bytesReceived];
-            Array.Copy(buffer, receivedData, bytesReceived);
-            return receivedData;
-        }
-
+            return null;
+        }   
 
         public String byteToString(byte[] bytes)
         {
