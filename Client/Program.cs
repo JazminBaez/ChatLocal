@@ -10,11 +10,11 @@ using System.Threading.Tasks;
 
 namespace Client
 {
-    class Program()
+    class Program
     {
         static async Task Main(String[] args)
         {
-            Client c = new Client("localhost", 4404);
+            Client c = new Client("localhost", 57343);
 
             // Iniciar la conexión
             await c.Start(); // Espera a que termine Start()

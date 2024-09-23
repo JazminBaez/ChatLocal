@@ -17,77 +17,85 @@ namespace Client
         IPAddress ipAdd;
         IPEndPoint endPoint;
 
-        Socket c_socket;
-        User user;
+        Socket s_client;
+        private User user { get; set; }
+
         public Client(string ip, int port) {
             host = Dns.GetHostEntry(ip);
             ipAdd = host.AddressList[0];
             endPoint = new IPEndPoint(ipAdd, port);
 
-            c_socket = new Socket(ipAdd.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            s_client = new Socket(ipAdd.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         }
 
         public async Task Start()
         {
-            await c_socket.ConnectAsync(endPoint);
-
+            await s_client.ConnectAsync(endPoint);
             Console.WriteLine("Conectado al servidor!");
 
+            await HandleUserAlias();
+
+            _ = Task.Run(() => serverConnection(s_client));
+
+            await HandleUserMessages();
+        }
+
+      
+
+        private async Task HandleUserAlias()
+        {
             Console.Write("Ingrese alias: ");
             string alias = Console.ReadLine();
             User user = new User(alias);
+            this.user = user;
             SendObject(user);
+        }
 
-            // Iniciar la recepción de mensajes en segundo plano
-            _ = Task.Run(() => serverConnection(c_socket));
-
-            // Bucle de envío de mensajes
+        private async Task HandleUserMessages()
+        {
             while (true)
             {
-                Console.WriteLine("Envia: ");
                 string msg = Console.ReadLine();
-                SendMessage(msg, alias);
+                SendMessage(msg, user.alias); 
             }
         }
 
-        public async Task serverConnection(Socket c_socket)
+
+        public async Task serverConnection(Socket s_client)
         {
             try
             {
-                Console.WriteLine("Debbug: ESCUCHANDO SERVER");
-
                 while (true)
                 {
-                    // Buffer para recibir datos del servidor
+                    
                     byte[] buffer = new byte[1024];
 
-                    // Esperar los datos recibidos
-                    int bytesReceived = await c_socket.ReceiveAsync(buffer, SocketFlags.None);
+                    int bytesReceived = await s_client.ReceiveAsync(buffer, SocketFlags.None);
 
-                    // Si bytesReceived es 0, significa que la conexión se cerró
                     if (bytesReceived == 0)
                     {
                         Console.WriteLine("Servidor ha cerrado la conexión.");
-                        break; // Salir del bucle si la conexión se cierra
+                        break; 
                     }
 
-                    // Deserializar el mensaje recibido
                     byte[] receivedData = new byte[bytesReceived];
                     Array.Copy(buffer, receivedData, bytesReceived);
 
-                    // Asegurarse de que los datos se están recibiendo y deserializando correctamente
+                    
                     Message receivedMessage;
                     try
                     {
                         receivedMessage = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
+         
+                        Console.WriteLine(">>>" + receivedMessage.msg);
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine("Error al deserializar el mensaje: " + ex.Message);
-                        continue; // Seguir recibiendo mensajes aunque ocurra un error
+                        continue; 
                     }
 
-                    // Imprimir el mensaje recibido
+             
                 }
             }
             catch (SocketException s_e)
@@ -123,7 +131,7 @@ namespace Client
         {
             Message message = new Message(msg, userFrom);
             string jsonString = JsonSerializer.Serialize(message);
-            c_socket.Send(JSONSerialization.Serialize(message));
+            s_client.Send(JSONSerialization.Serialize(message));
 
         }
 
@@ -133,8 +141,8 @@ namespace Client
             int bytesReceived;
             Message msg;
 
-            c_socket.Receive(buffer);
-            bytesReceived = await c_socket.ReceiveAsync(buffer, SocketFlags.None);
+            s_client.Receive(buffer);
+            bytesReceived = await s_client.ReceiveAsync(buffer, SocketFlags.None);
 
             byte[] receivedData = new byte[bytesReceived];
             Array.Copy(buffer, receivedData, bytesReceived);
@@ -146,13 +154,13 @@ namespace Client
 
         public void SendObject(object toSend)
         {
-            if (c_socket == null || !c_socket.Connected)
+            if (s_client == null || !s_client.Connected)
             {
                 throw new InvalidOperationException("El socket no está conectado.");
             }
 
             User user = (User)toSend;
-            c_socket.Send(JSONSerialization.Serialize(toSend));
+            s_client.Send(JSONSerialization.Serialize(toSend));
         }
         public String byteToString(byte[] bytes)
         {
