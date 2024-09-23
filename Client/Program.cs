@@ -18,6 +18,7 @@ namespace Client
             Client c = new Client("localhost", 57343);
 
             await c.Start(); 
+
         }
     }
 }
