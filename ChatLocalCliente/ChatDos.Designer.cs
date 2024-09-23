@@ -42,9 +42,11 @@
             // 
             // txtMessages
             // 
+            txtMessages.BackColor = SystemColors.Control;
             txtMessages.Location = new Point(30, 48);
             txtMessages.Multiline = true;
             txtMessages.Name = "txtMessages";
+            txtMessages.ReadOnly = true;
             txtMessages.Size = new Size(698, 323);
             txtMessages.TabIndex = 1;
             // 
@@ -62,6 +64,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            BackColor = SystemColors.ActiveCaption;
             ClientSize = new Size(800, 450);
             Controls.Add(btnSend);
             Controls.Add(txtMessages);

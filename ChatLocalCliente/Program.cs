@@ -7,8 +7,7 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
 
-        var chatForm = new ChatDos();
       
-        Application.Run(chatForm);
+        Application.Run(new UserForm());
     }
 }

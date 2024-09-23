@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.VisualBasic;
 using Serialization;
 
-
 namespace ChatLocalCliente
 {
     public class Client
@@ -19,7 +18,8 @@ namespace ChatLocalCliente
 
         Socket c_socket;
         User user;
-        public Client(string ip, int port) {
+        public Client(string ip, int port)
+        {
             host = Dns.GetHostEntry(ip);
             ipAdd = host.AddressList[0];
             endPoint = new IPEndPoint(ipAdd, port);
@@ -27,43 +27,88 @@ namespace ChatLocalCliente
             c_socket = new Socket(ipAdd.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
         }
 
-        public async Task Start()
+        public async Task Start(string alias)
         {
             await c_socket.ConnectAsync(endPoint);
 
-            Console.WriteLine("Conectado al servidor!");
+            User user = new User(alias);
+            SendObject(user);
 
-            _ = Task.Run(() => serverConnection(c_socket));
+            // Iniciar la recepción de mensajes en segundo plano
+            _ = Task.Run(() => serverConnection());
 
         }
 
-        public async Task serverConnection(Socket c_socket)
+
+
+        public async Task<Message> serverConnection()
         {
             try
             {
-                Console.WriteLine("Debbug: ESCUCHANDO SERVER");
-                byte[] buffer = new byte[1024];
-
+                MessageBox.Show("Debbug: INICIANDO ESCUCHA EN SERVER");
+                int bytesReceived = 1;
                 while (true)
                 {
-                    int bytesReceived = await c_socket.ReceiveAsync(buffer, SocketFlags.None);
+                    byte[] buffer = new byte[1024];
 
-                    if (bytesReceived == 0)
+                    MessageBox.Show("Debbug: ESPERANDO RECEPCIÓN DE MENSAJE...");
+
+                    bytesReceived = await c_socket.ReceiveAsync(buffer, SocketFlags.None);
+
+
+                   
+
+                    byte[] receivedData = new byte[bytesReceived];
+                    Array.Copy(buffer, receivedData, bytesReceived);
+
+                    Message receivedMessage;
+
+                    try
                     {
-                        Console.WriteLine("Desconectado del servidor.");
-                        break;
+                        MessageBox.Show("Debbug: INTENTANDO DESERIALIZAR MENSAJE...");
+
+                        receivedMessage = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
+                        MessageBox.Show("Debbug: MENSAJE DESERIALIZADO CON ÉXITO: " + receivedMessage.userFrom + ": " + receivedMessage.msg);
+
+                        return receivedMessage;
                     }
-
-
-                    Message receivedMessage = await this.Received();
-                    Console.WriteLine("--" + receivedMessage.userFrom + ": " + receivedMessage.msg);
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Error al deserializar el mensaje: " + ex.Message);
+                        return null; // Retornar null si hay un error en la deserialización
+                    }
                 }
-
+            }
+            catch (SocketException s_e)
+            {
+                MessageBox.Show("Error de conexión: " + s_e.Message);
+                return null;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                MessageBox.Show("Error general: " + e.Message);
+                return null;
             }
+        }
+
+
+        public async Task<byte[]> readBuffer(Socket client)
+        {
+            int bytesReceived;
+            byte[] buffer = new byte[1024];
+
+            bytesReceived = await client.ReceiveAsync(buffer, SocketFlags.None);
+
+            if (bytesReceived == 0)
+            {
+                Console.WriteLine($"Cliente {client.RemoteEndPoint} desconectado.");
+                return null;
+            }
+
+            byte[] receivedData = new byte[bytesReceived];
+            Array.Copy(buffer, receivedData, bytesReceived);
+
+            return receivedData;
         }
 
         public void SendMessage(string msg, string userFrom)
@@ -86,17 +131,20 @@ namespace ChatLocalCliente
             byte[] receivedData = new byte[bytesReceived];
             Array.Copy(buffer, receivedData, bytesReceived);
 
-           return msg = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
-            
-            
+            return msg = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
+
+
         }
 
         public void SendObject(object toSend)
         {
+            if (c_socket == null || !c_socket.Connected)
+            {
+                throw new InvalidOperationException("El socket no está conectado.");
+            }
+
             User user = (User)toSend;
             c_socket.Send(JSONSerialization.Serialize(toSend));
-            string jsonString = JsonSerializer.Serialize(toSend);
-
         }
         public String byteToString(byte[] bytes)
         {
@@ -117,6 +165,11 @@ namespace ChatLocalCliente
         public byte[] stringToBytes(string msg)
         {
             return Encoding.ASCII.GetBytes(msg);
+        }
+
+        public async Task<Socket> GetSocket()
+        {
+            return c_socket;
         }
 
     }
