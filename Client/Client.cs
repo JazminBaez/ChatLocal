@@ -5,7 +5,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.VisualBasic;
 using Serialization;
 using Server;
 
@@ -17,10 +16,11 @@ namespace Client
         IPAddress ipAdd;
         IPEndPoint endPoint;
 
-        Socket s_client;
+        Socket s_client; // Se usa s_client aquí
         private User user { get; set; }
 
-        public Client(string ip, int port) {
+        public Client(string ip, int port)
+        {
             host = Dns.GetHostEntry(ip);
             ipAdd = host.AddressList[0];
             endPoint = new IPEndPoint(ipAdd, port);
@@ -40,14 +40,11 @@ namespace Client
             await HandleUserMessages();
         }
 
-      
-
         private async Task HandleUserAlias()
         {
             Console.Write("Ingrese alias: ");
             string alias = Console.ReadLine();
-            User user = new User(alias);
-            this.user = user;
+            user = new User(alias);
             SendObject(user);
         }
 
@@ -56,10 +53,9 @@ namespace Client
             while (true)
             {
                 string msg = Console.ReadLine();
-                SendMessage(msg, user.alias); 
+                SendMessage(msg, user.alias);
             }
         }
-
 
         public async Task serverConnection(Socket s_client)
         {
@@ -67,35 +63,29 @@ namespace Client
             {
                 while (true)
                 {
-                    
                     byte[] buffer = new byte[1024];
-
                     int bytesReceived = await s_client.ReceiveAsync(buffer, SocketFlags.None);
 
                     if (bytesReceived == 0)
                     {
                         Console.WriteLine("Servidor ha cerrado la conexión.");
-                        break; 
+                        break;
                     }
 
                     byte[] receivedData = new byte[bytesReceived];
                     Array.Copy(buffer, receivedData, bytesReceived);
 
-                    
                     Message receivedMessage;
                     try
                     {
                         receivedMessage = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
-         
                         Console.WriteLine(">>>" + receivedMessage.msg);
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine("Error al deserializar el mensaje: " + ex.Message);
-                        continue; 
+                        continue;
                     }
-
-             
                 }
             }
             catch (SocketException s_e)
@@ -108,48 +98,10 @@ namespace Client
             }
         }
 
-        public async Task<byte[]> readBuffer(Socket client)
-        {
-            int bytesReceived;
-            byte[] buffer = new byte[1024];
-
-            bytesReceived = await client.ReceiveAsync(buffer, SocketFlags.None);
-
-            if (bytesReceived == 0)
-            {
-                Console.WriteLine($"Cliente {client.RemoteEndPoint} desconectado.");
-                return null;
-            }
-
-            byte[] receivedData = new byte[bytesReceived];
-            Array.Copy(buffer, receivedData, bytesReceived);
-
-            return receivedData;
-        }
-
         public void SendMessage(string msg, string userFrom)
         {
             Message message = new Message(msg, userFrom);
-            string jsonString = JsonSerializer.Serialize(message);
             s_client.Send(JSONSerialization.Serialize(message));
-
-        }
-
-        public async Task<Message> Received()
-        {
-            byte[] buffer = new byte[1024];
-            int bytesReceived;
-            Message msg;
-
-            s_client.Receive(buffer);
-            bytesReceived = await s_client.ReceiveAsync(buffer, SocketFlags.None);
-
-            byte[] receivedData = new byte[bytesReceived];
-            Array.Copy(buffer, receivedData, bytesReceived);
-
-           return msg = (Message)JSONSerialization.Deserialize(receivedData, typeof(Message));
-            
-            
         }
 
         public void SendObject(object toSend)
@@ -159,29 +111,20 @@ namespace Client
                 throw new InvalidOperationException("El socket no está conectado.");
             }
 
-            User user = (User)toSend;
             s_client.Send(JSONSerialization.Serialize(toSend));
         }
+
         public String byteToString(byte[] bytes)
         {
-            string msg;
-            int endIndex;
-
-            msg = Encoding.ASCII.GetString(bytes);
-            endIndex = msg.IndexOf("\0");
-
-            if (endIndex > 0)
-            {
-                msg = msg.Substring(0, endIndex);
-            }
-
-            return msg;
+            string msg = Encoding.ASCII.GetString(bytes);
+            int endIndex = msg.IndexOf("\0");
+            return endIndex > 0 ? msg.Substring(0, endIndex) : msg;
         }
 
         public byte[] stringToBytes(string msg)
         {
             return Encoding.ASCII.GetBytes(msg);
         }
-
     }
 }
+

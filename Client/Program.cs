@@ -14,10 +14,10 @@ namespace Client
     {
         static async Task Main(String[] args)
         {
+
             Client c = new Client("localhost", 57343);
 
-            // Iniciar la conexión
-            await c.Start(); // Espera a que termine Start()
+            await c.Start(); 
         }
     }
 }
